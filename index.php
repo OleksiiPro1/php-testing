@@ -50,7 +50,7 @@ if (isset($_FILES['image'])) {
         </ul>
     </form>
 
-
+                <p>Post</p>
 
     <form action="" method="post" enctype="multipart/form-data">
         <p>Your name: <input type="text" name="name"></p>
@@ -61,6 +61,19 @@ if (isset($_FILES['image'])) {
     Hello <?php echo htmlspecialchars($_POST['name']);   ?>
     <br>
     Your age:  <?php echo htmlspecialchars($_POST['age']);   ?>
+
+                <p>Get</p>
+
+                <form action="" method="get" enctype="multipart/form-data">
+        <p>Your name: <input type="text" name="name"></p>
+        <p>Your age: <input type="text" name="age"></p>
+        <input type="submit">
+        
+    </form>
+    Hello <?php echo htmlspecialchars($_GET['name']);   ?>
+    <br>
+    Your age:  <?php echo htmlspecialchars($_GET['age']);   ?>
+    
 
     </body>
 </html>
