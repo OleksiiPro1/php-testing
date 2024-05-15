@@ -49,5 +49,18 @@ if (isset($_FILES['image'])) {
             <?php endif; ?>
         </ul>
     </form>
+
+
+
+    <form action="" method="post" enctype="multipart/form-data">
+        <p>Your name: <input type="text" name="name"></p>
+        <p>Your age: <input type="text" name="age"></p>
+        <input type="submit">
+        
+    </form>
+    Hello <?php echo htmlspecialchars($_POST['name']);   ?>
+    <br>
+    Your age:  <?php echo htmlspecialchars($_POST['age']);   ?>
+
     </body>
 </html>
