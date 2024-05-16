@@ -62,6 +62,8 @@ if (isset($_FILES['image'])) {
     <br>
     Your age:  <?php echo htmlspecialchars($_POST['age']);   ?>
 
+
+    
                 <p>Get</p>
 
                 <form action="" method="get" enctype="multipart/form-data">
@@ -73,7 +75,7 @@ if (isset($_FILES['image'])) {
     Hello <?php echo htmlspecialchars($_GET['name']);   ?>
     <br>
     Your age:  <?php echo htmlspecialchars($_GET['age']);   ?>
-    
+
 
     </body>
 </html>
