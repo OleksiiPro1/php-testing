@@ -156,11 +156,48 @@ add_filter('pre_comment_approved', 'auto_approve_comments', 99, 2);
 
 
 
+add_action('wp_head', 'change_button');
+function change_button() {
 
 
+?>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Create the new button element
+        var newButton = document.createElement('button');
+        newButton.type = 'button'; // Specify button type
+        newButton.innerHTML = 'Go to Specific Page';
+        newButton.className = 'new-button-class'; // Add class for styling if needed
 
+        // PHP logic to determine the URL
+        var redirectUrl = '<?php 
+            if (get_the_ID() == 94) {
+                echo 'https://www.google.com';
+            } elseif (is_page(2)) {
+                echo '/page2';
+            } elseif (is_page(3)) {
+                echo '/page3';
+            } else {
+                echo '/';
+            }
+        ?>';
 
+        // Add click event to the button to navigate to the specific page
+        newButton.addEventListener('click', function() {
+            window.location.href = redirectUrl;
+        });
+
+        // Append the new button to the form
+        var form = document.querySelector('.cart.AA');
+        if (form) {
+            form.appendChild(newButton);
+        }
+    });
+    </script>
+
+<?php
+}
 
 
 
@@ -198,3 +235,7 @@ function custom_menu_scripts() {
 }
 add_action('wp_footer', 'custom_menu_scripts');
 
+function add_custom_post_template() {
+    add_post_type_support('post', 'custom-template');
+}
+add_action('init', 'add_custom_post_template');
