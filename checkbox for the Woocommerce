@@ -1,0 +1,16 @@
+function add_terms_conditions_checkbox() {
+    ?>
+    <div class="terms-conditions-checkbox" style="margin-top: 20px; margin-bottom: 20px;">
+        <input type="checkbox" id="terms_conditions" name="terms_conditions">
+        <label for="terms_conditions"> I have read and agree to the Terms and Conditions</label>
+    </div>
+    <?php
+}
+add_action('woocommerce_review_order_before_submit', 'add_terms_conditions_checkbox', 20);
+
+function validate_terms_conditions_checkbox() {
+    if ( ! isset( $_POST['terms_conditions'] ) ) {
+        wc_add_notice( __( 'You must agree to the terms and conditions before placing your order.' ), 'error' );
+    }
+}
+add_action('woocommerce_checkout_process', 'validate_terms_conditions_checkbox');
