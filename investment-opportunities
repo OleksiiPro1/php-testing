@@ -4,7 +4,22 @@
  * Template Post Type: post
  */
 
- get_header(); ?>
+get_header(); 
+
+// Получаем текущий пост
+global $post;
+$post_id = $post->ID;
+
+// Подключаемся к базе данных и получаем данные для текущей статьи
+global $wpdb;
+$table_name = $wpdb->prefix . 'analytics_all_payments';
+$query = $wpdb->prepare("SELECT total_amount FROM $table_name WHERE name = %s", $post->post_title);
+$total_amount = (float) $wpdb->get_var($query); // Приведение к числовому типу
+
+// Получаем значение GOAL из CFS и приводим его к числовому типу
+$goal = (float) CFS()->get('goal');
+
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -13,6 +28,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Investment Progress</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .smart-slider-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+            overflow: hidden;
+        }
+
+        .smart-slider-slide {
+            display: none;
+        }
+
+        .smart-slider-active {
+            display: block;
+        }
+
+        .smart-slider-prev,
+        .smart-slider-next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            width: auto;
+            padding: 16px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            user-select: none;
+            transform: translateY(-50%);
+        }
+
+        .smart-slider-prev {
+            left: 0;
+            border-radius: 3px 0 0 3px;
+        }
+
+        .smart-slider-next {
+            right: 0;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .smart-slider-prev:hover,
+        .smart-slider-next:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+    </style>
 </head>
 <body>
 
@@ -20,122 +83,99 @@
     <div class="container-product-p">
     
         <div class="left-div-product-p">
-                        <div class="embed-responsive embed-responsive-16by9 video_embed" data-log="true" data-value="video">
-														<img class="img-responsive" src="<?php echo CFS()->get( 'main_image' ); ?>" alt="OFFICEBRICKS 2024 Pitch Video">
-							    <div class="video-overlay2" data-videoid="yWuE923zvdg">
-								    	<a class="overlay-play-button" href="#"></a>
-								</div>
-                                <h1><?php echo CFS()->get( 'company_name' ); ?></h1>
-						</div>
-                            
-                            <div class="progress-bar-container">
-                            <div class="progress-bar-data">
-                                <div><p>FUNDED: <strong><?php echo CFS()->get( 'committed' ); ?></strong></p></div>
-                                <div><p>GOAL: <strong><?php echo CFS()->get( 'goal' ); ?></strong></p></div>
-                            </div>
-                                <div class="progress-bar">
-                                <div class="progress"></div>
-                            </div>
-                            <br><br>
-                            
-                            <div class="progress-bar-data">
-                                <div><p>RESERVED: <strong><?php echo CFS()->get( 'reserved' ); ?></strong></p></div>
-                            </div>
-                            <div class="progress-bar-r">
-                                <div class="progress-r"></div>
-                            </div>
-                            
-                            
-                            <!-- <p>Premium soundproof booths for a modern room-in-room concept in industry and offices: modular, mobile, customizable</p> -->
-                            </div>
+            <div class="embed-responsive embed-responsive-16by9 video_embed" data-log="true" data-value="video">
+                <img class="img-responsive" src="<?php echo CFS()->get('main_image'); ?>" alt="OFFICEBRICKS 2024 Pitch Video">
+                <div class="video-overlay2" data-videoid="yWuE923zvdg">
+                    <a class="overlay-play-button" href="#"></a>
+                </div>
+                <h1><?php echo CFS()->get('company_name'); ?></h1>
+            </div>
+                
+            <div class="progress-bar-container">
+                <div class="progress-bar-data">
+                    <div><p>FUNDED: <strong><?php echo number_format($total_amount, 2); ?></strong></p></div>
+                    <div><p>GOAL: <strong><?php echo number_format($goal, 2); ?></strong></p></div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: <?php echo min(($total_amount / $goal) * 100, 100); ?>%;"></div>
+                </div>
+                <br><br>
+                <div class="progress-bar-data">
+                    <div><p>RESERVED: <strong><?php echo number_format($total_amount, 2); ?></strong></p></div>
+                </div>
+                <div class="progress-bar-r">
+                    <div class="progress-r" style="width: <?php echo min(($total_amount / $goal) * 100, 100); ?>%; ?>"></div>
+                </div>
+            </div>
         </div>
         
         <div class="right-div-product-p">
             <div class="investment-info">
-            <h2>Investment Details</h2>
-            <p class="product-parameters-p">Targeted return per year: <strong><?php echo CFS()->get( 'targeted_return_per_year' ); ?></strong></p>
-            <p class="product-parameters-p">Target total return: <strong><?php echo CFS()->get( 'target_total_return'); ?></strong></p>
-            <p class="product-parameters-p">Targeted time to exit: <strong><?php echo CFS()->get( 'targeted_time_to_exit'); ?></strong></p>
-            <p class="product-parameters-p">Financing target: <strong><?php echo CFS()->get( 'financing_target'); ?></strong></p>
-            <p class="product-parameters-p">Minimum investment: <strong><?php echo CFS()->get( 'minimum_investment'); ?></strong></p>
-            <p class="product-parameters-p">Company valuation: <strong><?php echo CFS()->get( 'company_valuation'); ?></strong></p>
-            <p class="product-parameters-p">Intermediaries: <strong><?php echo CFS()->get( 'intermediaries'); ?></strong></p>
-            <p class="product-parameters-p"><?php echo CFS()->get( 'investors_and_rounds'); ?></p>
-        
-        
-    
+                <h2>Investment Details</h2>
+                <p class="product-parameters-p">Targeted return per year: <strong><?php echo CFS()->get('targeted_return_per_year'); ?></strong></p>
+                <p class="product-parameters-p">Target total return: <strong><?php echo CFS()->get('target_total_return'); ?></strong></p>
+                <p class="product-parameters-p">Targeted time to exit: <strong><?php echo CFS()->get('targeted_time_to_exit'); ?></strong></p>
+                <p class="product-parameters-p">Financing target: <strong><?php echo CFS()->get('financing_target'); ?></strong></p>
+                <p class="product-parameters-p">Minimum investment: <strong><?php echo CFS()->get('minimum_investment'); ?></strong></p>
+                <p class="product-parameters-p">Company valuation: <strong><?php echo CFS()->get('company_valuation'); ?></strong></p>
+                <p class="product-parameters-p">Intermediaries: <strong><?php echo CFS()->get('intermediaries'); ?></strong></p>
+                <p class="product-parameters-p"><?php echo CFS()->get('investors_and_rounds'); ?></p>
+                
+                <div class="col-xs-12 kpi-button-wrapper-unique">
+                    <?php if (is_user_logged_in()) : ?>
+                        <!-- Отображается, если пользователь залогинен -->
+                        <?php echo do_shortcode('[membership level="1,2"]<a href="https://smarttrader.investments/payment-page/" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Invest now</a>[/membership]'); ?>
+                        <p class="confirm-your-email-address2"><b>Your Investor membership will be activated as soon as you confirm your email address.</b></p>
+                        <script>
+                            function checkButtonStatus() {
+                                const investButton = document.getElementById('mainInvestButtonUnique');
+                                const emailAddressElements = document.querySelectorAll('.confirm-your-email-address2');
 
-            <div class="col-xs-12 kpi-button-wrapper-unique">
-    <?php if ( is_user_logged_in() ) : ?>
-        <!-- Отображается, если пользователь залогинен -->
-        
-        <?php echo do_shortcode('[membership level="1,2"]<a href="https://smarttrader.investments/payment-page/" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Invest now</a>[/membership]'); ?>
+                                const isInvestButtonVisible = window.getComputedStyle(investButton).display === 'inline-block';
 
+                                emailAddressElements.forEach(element => {
+                                    if (isInvestButtonVisible) {
+                                        element.style.display = 'none';
+                                    } else {
+                                        element.style.display = 'block';
+                                    }
+                                });
+                            }
 
-        <p class="confirm-your-email-address2"><b>Your Investor membership will be activated as soon as you confirm your email address.</b></p>
-        <script>
-    function checkButtonStatus() {
-        const investButton = document.getElementById('mainInvestButtonUnique');
-        const emailAddressElements = document.querySelectorAll('.confirm-your-email-address2');
+                            // Call the function to check the status and update the display property
+                            checkButtonStatus();
 
-        const isInvestButtonVisible = window.getComputedStyle(investButton).display === 'inline-block';
-
-        emailAddressElements.forEach(element => {
-            if (isInvestButtonVisible) {
-                element.style.display = 'none';
-            } else {
-                element.style.display = 'block';
-            }
-        });
-    }
-
-    // Call the function to check the status and update the display property
-    checkButtonStatus();
-
-    // Optionally, you can set an interval to check periodically
-    // setInterval(checkButtonStatus, 1000);
-</script>
-    <?php else : ?>
-        <!-- Отображается, если пользователь не залогинен -->
-        <a href="https://smarttrader.investments/membership-checkout" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">
-            Register
-        </a>
-        
-        <div class="register-login-link-unique">
-        Already registered?&nbsp;&nbsp;&nbsp;<a class="login-link-unique" href="https://smarttrader.investments/login/">Log in</a>
+                            // Optionally, you can set an interval to check periodically
+                            // setInterval(checkButtonStatus, 1000);
+                        </script>
+                    <?php else : ?>
+                        <!-- Отображается, если пользователь не залогинен -->
+                        <a href="https://smarttrader.investments/membership-checkout" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Register</a>
+                        <div class="register-login-link-unique">
+                            Already registered?&nbsp;&nbsp;&nbsp;<a class="login-link-unique" href="https://smarttrader.investments/login/">Log in</a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
-    <?php endif; ?>
-</div>
-
-</div>
-    <script src="script.js"></script>
-        
-    
-    </div>
-
-
-    
-
     </div>
 </section>
 
 <section class="first-product-section">
     <div class="container-product-tabs">
-
-<div class="tabs-container-smart-post">
-        <div class="tab-smart-post active-smart-post" data-tab="overview">OVERVIEW</div>
-        <div class="tab-smart-post" data-tab="videos">VIDEOS</div>
-        <div class="tab-smart-post" data-tab="updates">UPDATES</div>
-    </div>
-    <div class="tab-content-container-smart-post">
-        <div id="overview" class="tab-content-smart-post active-smart-post">
-            <h2>Overview</h2>
-        <!-- Pdf -->
-            <a href="/1717747130_2024.06.03_ScrapBees_Deck_Companisto_IC_ENG.pdf" download class="smart-pdf-button">Download PDF</a>
-
-        <!-- Slide show             -->
-    <div class="smart-slider-container">
-        <div class="smart-slider-slide smart-slider-active">
+        <div class="tabs-container-smart-post">
+            <div class="tab-smart-post active-smart-post" data-tab="overview">OVERVIEW</div>
+            <div class="tab-smart-post" data-tab="videos">VIDEOS</div>
+            <div class="tab-smart-post" data-tab="updates">UPDATES</div>
+        </div>
+        <div class="tab-content-container-smart-post">
+            <div id="overview" class="tab-content-smart-post active-smart-post">
+                <h2>Overview</h2>
+                <!-- Pdf -->
+                <a href="/1717747130_2024.06.03_ScrapBees_Deck_Companisto_IC_ENG.pdf" download class="smart-pdf-button">Download PDF</a>
+                <!-- Slide show -->
+                <div class="smart-slider-container">
+                <div class="smart-slider-slide smart-slider-active">
             <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-0.jpg" alt="Slide 1">
         </div>
         <div class="smart-slider-slide">
@@ -183,101 +223,87 @@
         <div class="smart-slider-slide">
             <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-15.jpg" alt="Slide 3">
         </div>
-       
-        <button class="smart-slider-prev">&#10094;</button>
-        <button class="smart-slider-next">&#10095;</button>
-    </div>
-            <!-- Dynamic text -->
-            <?php echo CFS()->get( 'investment_opportunities_description'); ?>
-        </div>
-        <div id="videos" class="tab-content-smart-post">
-            <h2>Videos</h2>
-            <p>Content for the Videos section.</p>
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/KQ06gXz1rtk?si=lHoC-55p5u27WZvE&amp;start=157" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-        </div>
-        <div id="updates" class="tab-content-smart-post">
-
-            <div class="smart-updates-wrapper">
-    <?php display_category_posts('post-2-updates'); ?>
-</div>
-            
+                    <button class="smart-slider-prev">&#10094;</button>
+                    <button class="smart-slider-next">&#10095;</button>
+                </div>
+                <!-- Dynamic text -->
+                <?php echo CFS()->get('investment_opportunities_description'); ?>
+            </div>
+            <div id="videos" class="tab-content-smart-post">
+                <h2>Videos</h2>
+                <p>Content for the Videos section.</p>
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/KQ06gXz1rtk?si=lHoC-55p5u27WZvE&amp;start=157" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+            <div id="updates" class="tab-content-smart-post">
+                <div class="smart-updates-wrapper">
+                    <?php display_category_posts('post-2-updates'); ?>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 </section>
-
-
-
-
 
 <section class="third-product-section">
     <div class="container-product-comments">
-
-<?php echo do_shortcode('[my_unique_custom_comments]'); ?>
-</div>
+        <?php echo do_shortcode('[my_unique_custom_comments]'); ?>
+    </div>
 </section>
 
 <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            let slideIndex = 0;
-            const slides = document.querySelectorAll('.smart-slider-slide');
-            const prev = document.querySelector('.smart-slider-prev');
-            const next = document.querySelector('.smart-slider-next');
+document.addEventListener('DOMContentLoaded', function() {
+    let slideIndex = 0;
+    const slides = document.querySelectorAll('.smart-slider-slide');
+    const prev = document.querySelector('.smart-slider-prev');
+    const next = document.querySelector('.smart-slider-next');
 
-            function showSlide(index) {
-                slides.forEach((slide, i) => {
-                    slide.style.display = 'none';
-                    slide.classList.remove('smart-slider-active');
-                    if (i === index) {
-                        slide.style.display = 'block';
-                        slide.classList.add('smart-slider-active');
-                    }
-                });
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.style.display = 'none';
+            slide.classList.remove('smart-slider-active');
+            if (i === index) {
+                slide.style.display = 'block';
+                slide.classList.add('smart-slider-active');
             }
-
-            function showNextSlide() {
-                slideIndex = (slideIndex + 1) % slides.length;
-                showSlide(slideIndex);
-            }
-
-            function showPrevSlide() {
-                slideIndex = (slideIndex - 1 + slides.length) % slides.length;
-                showSlide(slideIndex);
-            }
-
-            prev.addEventListener('click', showPrevSlide);
-            next.addEventListener('click', showNextSlide);
-
-            showSlide(slideIndex);
         });
-    </script>
+    }
 
+    function showNextSlide() {
+        slideIndex = (slideIndex + 1) % slides.length;
+        showSlide(slideIndex);
+    }
 
-<script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tabs = document.querySelectorAll('.tab-smart-post');
-            const contents = document.querySelectorAll('.tab-content-smart-post');
+    function showPrevSlide() {
+        slideIndex = (slideIndex - 1 + slides.length) % slides.length;
+        showSlide(slideIndex);
+    }
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const tabId = this.getAttribute('data-tab');
+    prev.addEventListener('click', showPrevSlide);
+    next.addEventListener('click', showNextSlide);
 
-                    tabs.forEach(t => t.classList.remove('active-smart-post'));
-                    contents.forEach(c => c.classList.remove('active-smart-post'));
+    showSlide(slideIndex);
+});
 
-                    this.classList.add('active-smart-post');
-                    document.getElementById(tabId).classList.add('active-smart-post');
-                });
-            });
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.tab-smart-post');
+    const contents = document.querySelectorAll('.tab-content-smart-post');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+
+            tabs.forEach(t => t.classList.remove('active-smart-post'));
+            contents.forEach(c => c.classList.remove('active-smart-post'));
+
+            this.classList.add('active-smart-post');
+            document.getElementById(tabId).classList.add('active-smart-post');
         });
-    </script>
+    });
+});
 
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.querySelector('.progress');
-    const goal = <?php echo (float) CFS()->get('goal'); ?>; // Set this value from the backend
-    const investment = <?php echo (float) CFS()->get('committed'); ?>; // Set this value from the backend
+    const goal = <?php echo (float) $goal; ?>;
+    const investment = <?php echo (float) $total_amount; ?>;
 
     function updateProgress() {
         const progressPercentage = (investment / goal) * 100;
@@ -286,26 +312,24 @@
 
     // Initial update
     updateProgress();
-  });
+});
 
-  document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const progressBarR = document.querySelector('.progress-r');
-    const goal = <?php echo (float) CFS()->get('goal'); ?>; // Set this value from the backend
-    const investment = <?php echo (float) CFS()->get('reserved'); ?>; // Set this value from the backend
+    const goal = <?php echo (float) $goal; ?>;
+    const reserved = <?php echo (float) $total_amount; ?>;
 
     function updateProgressR() {
-        const progressPercentage = (investment / goal) * 100;
+        const progressPercentage = (reserved / goal) * 100;
         progressBarR.style.width = `${Math.min(progressPercentage, 100)}%`;
     }
 
     // Initial update
     updateProgressR();
-  });
+});
 </script>
-
 
 </body>
 </html>
-
 
 <?php get_footer(); ?>
