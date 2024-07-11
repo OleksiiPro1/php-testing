@@ -97,12 +97,12 @@
 </script>
     <?php else : ?>
         <!-- Отображается, если пользователь не залогинен -->
-        <a href="#" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">
-            Jetzt registrieren
+        <a href="https://smarttrader.investments/membership-checkout" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">
+            Register
         </a>
         
         <div class="register-login-link-unique">
-            Schon registriert?&nbsp;&nbsp;&nbsp;<a class="login-link-unique" href="#">Log in</a>
+        Already registered?&nbsp;&nbsp;&nbsp;<a class="login-link-unique" href="https://smarttrader.investments/login/">Log in</a>
         </div>
     <?php endif; ?>
 </div>
@@ -309,4 +309,3 @@
 
 
 <?php get_footer(); ?>
-
