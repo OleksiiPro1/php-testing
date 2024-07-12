@@ -122,6 +122,18 @@ if ($total_amount >= $goal) {
         .smart-slider-next:hover {
             background-color: rgba(0, 0, 0, 0.8);
         }
+
+        .disabled-button {
+            opacity: 0.9;
+            pointer-events: none;
+            background-color: grey; /* Adjust to your desired color */
+        }
+
+        .goal-achieved-message {
+            color: red; /* Adjust to your desired color */
+            font-weight: bold;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -173,7 +185,8 @@ if ($total_amount >= $goal) {
                     <?php if (is_user_logged_in()) : ?>
                         <!-- Отображается, если пользователь залогинен -->
                         <?php if ($goal_achieved) : ?>
-                            <button type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique" disabled>Invest now</button>
+                            <button type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique disabled-button" disabled>Invest now</button>
+                            <p class="goal-achieved-message">You can't fund this project. The goal has been achieved.</p>
                         <?php else : ?>
                             <?php echo do_shortcode('[membership level="1,2"]<a href="https://smarttrader.investments/payment-page/" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Invest now</a>[/membership]'); ?>
                         <?php endif; ?>
