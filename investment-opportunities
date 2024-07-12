@@ -67,6 +67,51 @@ if ($total_amount >= $goal) {
         $goal_achieved = true;
     }
 }
+
+// Проверка условия и создание таблицы, если зарезервированная сумма превышает 105% от цели
+$reserved_maximum_table = $wpdb->prefix . 'reserved_maximum';
+$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $reserved_maximum_table));
+
+if (!$table_exists) {
+    // Создаем таблицу, если она не существует
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE $reserved_maximum_table (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        post_title varchar(255) NOT NULL,
+        post_id bigint(20) NOT NULL,
+        exceeded boolean DEFAULT 0 NOT NULL,
+        PRIMARY KEY  (id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
+// Вычисляем, превышает ли сумма 105% от цели
+$exceeded = ($sum >= $goal * 1.05) ? 1 : 0;
+
+// Проверяем, есть ли запись для текущей статьи
+$existing_entry = $wpdb->get_var($wpdb->prepare("SELECT id FROM $reserved_maximum_table WHERE post_id = %d", $post_id));
+
+if ($existing_entry) {
+    // Обновляем существующую запись
+    $wpdb->update($reserved_maximum_table, [
+        'exceeded' => $exceeded,
+    ], [
+        'post_id' => $post_id
+    ]);
+} else {
+    // Вставляем новую запись
+    $wpdb->insert($reserved_maximum_table, [
+        'post_title' => $post->post_title,
+        'post_id' => $post_id,
+        'exceeded' => $exceeded,
+    ]);
+}
+
+// Проверяем, превышен ли лимит резервирования
+$reserved_exceeded = $wpdb->get_var($wpdb->prepare("SELECT exceeded FROM $reserved_maximum_table WHERE post_id = %d", $post_id));
 ?>
 
 <!DOCTYPE html>
@@ -184,9 +229,9 @@ if ($total_amount >= $goal) {
                 <div class="col-xs-12 kpi-button-wrapper-unique">
                     <?php if (is_user_logged_in()) : ?>
                         <!-- Отображается, если пользователь залогинен -->
-                        <?php if ($goal_achieved) : ?>
+                        <?php if ($goal_achieved || $reserved_exceeded) : ?>
                             <button type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique disabled-button" disabled>Invest now</button>
-                            <p class="goal-achieved-message">You can't fund this project. The goal has been achieved.</p>
+                            <p class="goal-achieved-message">You can't fund this project. The goal has been achieved or reserved amount has exceeded the limit.</p>
                         <?php else : ?>
                             <?php echo do_shortcode('[membership level="1,2"]<a href="https://smarttrader.investments/payment-page/" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Invest now</a>[/membership]'); ?>
                         <?php endif; ?>
