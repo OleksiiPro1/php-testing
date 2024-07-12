@@ -16,9 +16,16 @@ $table_name = $wpdb->prefix . 'analytics_all_payments';
 $query = $wpdb->prepare("SELECT total_amount FROM $table_name WHERE name = %s", $post->post_title);
 $total_amount = (float) $wpdb->get_var($query); // Приведение к числовому типу
 
-// Получаем значение GOAL из CFS и приводим его к числовому типу
+// Получаем значение plus_reserved и goal из CFS и приводим их к числовому типу
+$plus_reserved = (float) CFS()->get('plus_reserved');
 $goal = (float) CFS()->get('goal');
 
+// Вычисляем сумму
+$sum = $total_amount + $plus_reserved;
+
+// Вычисляем процент выполнения для основного и резервного прогресс-баров
+$progress_percentage = min(($total_amount / $goal) * 100, 100);
+$progress_percentage_reserved = min(($sum / $goal) * 100, 100);
 ?>
 
 <!DOCTYPE html>
@@ -32,7 +39,7 @@ $goal = (float) CFS()->get('goal');
         .smart-slider-container {
             position: relative;
             width: 100%;
-            max-width: 600px;
+            /* max-width: 600px; */
             margin: auto;
             overflow: hidden;
         }
@@ -76,6 +83,8 @@ $goal = (float) CFS()->get('goal');
             background-color: rgba(0, 0, 0, 0.8);
         }
     </style>
+
+    
 </head>
 <body>
 
@@ -97,14 +106,16 @@ $goal = (float) CFS()->get('goal');
                     <div><p>GOAL: <strong><?php echo number_format($goal, 2); ?></strong></p></div>
                 </div>
                 <div class="progress-bar">
-                    <div class="progress" style="width: <?php echo min(($total_amount / $goal) * 100, 100); ?>%;"></div>
+                    <div class="progress" style="width: <?php echo $progress_percentage; ?>%;"></div>
                 </div>
                 <br><br>
                 <div class="progress-bar-data">
-                    <div><p>RESERVED: <strong><?php echo number_format($total_amount, 2); ?></strong></p></div>
+                    <div>
+                        <p>RESERVED: <strong><?php echo number_format($sum, 2); ?></strong></p>
+                    </div>
                 </div>
                 <div class="progress-bar-r">
-                    <div class="progress-r" style="width: <?php echo min(($total_amount / $goal) * 100, 100); ?>%; ?>"></div>
+                    <div class="progress-r" style="width: <?php echo $progress_percentage_reserved; ?>%;"></div>
                 </div>
             </div>
         </div>
@@ -302,32 +313,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.querySelector('.progress');
+    const progressBarR = document.querySelector('.progress-r');
     const goal = <?php echo (float) $goal; ?>;
     const investment = <?php echo (float) $total_amount; ?>;
+    const reserved = <?php echo (float) $sum; ?>;
 
     function updateProgress() {
         const progressPercentage = (investment / goal) * 100;
         progressBar.style.width = `${Math.min(progressPercentage, 100)}%`;
     }
 
-    // Initial update
-    updateProgress();
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    const progressBarR = document.querySelector('.progress-r');
-    const goal = <?php echo (float) $goal; ?>;
-    const reserved = <?php echo (float) $total_amount; ?>;
-
     function updateProgressR() {
-        const progressPercentage = (reserved / goal) * 100;
-        progressBarR.style.width = `${Math.min(progressPercentage, 100)}%`;
+        const progressPercentageR = (reserved / goal) * 100;
+        progressBarR.style.width = `${Math.min(progressPercentageR, 100)}%`;
     }
 
     // Initial update
+    updateProgress();
     updateProgressR();
 });
 </script>
+
 
 </body>
 </html>
