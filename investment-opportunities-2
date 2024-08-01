@@ -1,0 +1,503 @@
+<?php
+/**
+ * Template Name: Investment Opportunities
+ * Template Post Type: post
+ */
+
+get_header(); 
+
+// Получаем текущий пост
+global $post;
+$post_id = $post->ID;
+
+// Подключаемся к базе данных и получаем данные для текущей статьи
+global $wpdb;
+$table_name = $wpdb->prefix . 'analytics_all_payments';
+$query = $wpdb->prepare("SELECT total_amount FROM $table_name WHERE name = %s", $post->post_title);
+$total_amount = (float) $wpdb->get_var($query); // Приведение к числовому типу
+
+
+
+
+// Задайте параметры для запроса
+$post_ids = [275, 279, 404, 410]; // Массив значений post_id
+$table_name = 'all_reservations'; // Имя вашей таблицы
+
+// Преобразуйте массив значений в строку для SQL-запроса
+$placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
+$query = $wpdb->prepare("SELECT post_id, SUM(amount) as total_amount FROM $table_name WHERE post_id IN ($placeholders) GROUP BY post_id", ...$post_ids);
+
+// Выполните SQL-запрос
+$results = $wpdb->get_results($query);
+
+// Инициализируем переменную для хранения суммы резервов для текущего поста
+$plus_reserved = 0.0;
+
+if (!empty($results)) {
+    foreach ($results as $row) {
+        if ($row->post_id == $post_id) {
+            $plus_reserved = (float) $row->total_amount;
+        }
+    }
+}
+
+// Проверка типов данных
+// var_dump($total_amount);
+// var_dump($plus_reserved);
+
+// Убедитесь, что они числа
+if (!is_float($total_amount)) {
+    $total_amount = (float) $total_amount;
+}
+
+if (!is_float($plus_reserved)) {
+    $plus_reserved = (float) $plus_reserved;
+}
+
+// Вычисляем сумму
+$sum = $total_amount + $plus_reserved;
+
+// Вывод результата
+// echo 'Total Amount: ' . esc_html($total_amount) . '<br>';
+// echo 'Sum of Plus Reserved for current post: ' . esc_html($plus_reserved) . '<br>';
+// echo 'Final Sum: ' . esc_html($sum);
+
+//  $plus_reserved = (float) CFS()->get('plus_reserved');
+
+
+
+$goal = (float) CFS()->get('goal');
+
+// Вычисляем сумму
+$sum = $total_amount + $plus_reserved;
+
+// Вычисляем процент выполнения для основного и резервного прогресс-баров
+$progress_percentage = min(($total_amount / $goal) * 100, 100);
+$progress_percentage_reserved = min(($sum / $goal) * 100, 100);
+
+// Проверка условия и создание таблицы, если цель достигнута
+$goal_achieved = false;
+$goal_achieved_table = $wpdb->prefix . 'goal_achieved';
+
+// Проверяем, существует ли уже таблица
+$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $goal_achieved_table));
+
+if (!$table_exists) {
+    // Создаем таблицу, если она не существует
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE $goal_achieved_table (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        post_title varchar(255) NOT NULL,
+        post_id bigint(20) NOT NULL,
+        achieved boolean DEFAULT 1 NOT NULL,
+        PRIMARY KEY  (id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
+// Проверяем, есть ли запись для текущей статьи
+$existing_entry = $wpdb->get_var($wpdb->prepare("SELECT id FROM $goal_achieved_table WHERE post_id = %d", $post_id));
+
+if ($total_amount >= $goal) {
+    if ($existing_entry) {
+        // Обновляем существующую запись
+        $wpdb->update($goal_achieved_table, [
+            'achieved' => 1,
+        ], [
+            'id' => $existing_entry
+        ]);
+    } else {
+        // Вставляем новую запись
+        $wpdb->insert($goal_achieved_table, [
+            'post_title' => $post->post_title,
+            'post_id' => $post_id,
+            'achieved' => 1,
+        ]);
+    }
+    $goal_achieved = true;
+} else {
+    if ($existing_entry) {
+        // Обновляем существующую запись, если цель не достигнута
+        $wpdb->update($goal_achieved_table, [
+            'achieved' => 0,
+        ], [
+            'id' => $existing_entry
+        ]);
+    }
+}
+
+// Проверка условия и создание таблицы, если зарезервированная сумма превышает 105% от цели
+$reserved_maximum_table = $wpdb->prefix . 'reserved_maximum';
+$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $reserved_maximum_table));
+
+if (!$table_exists) {
+    // Создаем таблицу, если она не существует
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE $reserved_maximum_table (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        post_title varchar(255) NOT NULL,
+        post_id bigint(20) NOT NULL,
+        exceeded boolean DEFAULT 0 NOT NULL,
+        PRIMARY KEY  (id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
+// Вычисляем, превышает ли сумма 105% от цели
+$exceeded = ($sum >= $goal * 1.05) ? 1 : 0;
+
+// Проверяем, есть ли запись для текущей статьи
+$existing_entry_reserved = $wpdb->get_var($wpdb->prepare("SELECT id FROM $reserved_maximum_table WHERE post_id = %d", $post_id));
+
+if ($existing_entry_reserved) {
+    // Обновляем существующую запись
+    $wpdb->update($reserved_maximum_table, [
+        'exceeded' => $exceeded,
+    ], [
+        'id' => $existing_entry_reserved
+    ]);
+} else {
+    // Вставляем новую запись
+    $wpdb->insert($reserved_maximum_table, [
+        'post_title' => $post->post_title,
+        'post_id' => $post_id,
+        'exceeded' => $exceeded,
+    ]);
+}
+
+// Проверяем, превышен ли лимит резервирования
+$reserved_exceeded = $wpdb->get_var($wpdb->prepare("SELECT exceeded FROM $reserved_maximum_table WHERE post_id = %d", $post_id));
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Progress</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .smart-slider-container {
+            position: relative;
+            width: 100%;
+            margin: auto;
+            overflow: hidden;
+        }
+
+        .smart-slider-slide {
+            display: none;
+        }
+
+        .smart-slider-active {
+            display: block;
+        }
+
+        .smart-slider-prev,
+        .smart-slider-next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            width: auto;
+            padding: 16px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            user-select: none;
+            transform: translateY(-50%);
+        }
+
+        .smart-slider-prev {
+            left: 0;
+            border-radius: 3px 0 0 3px;
+        }
+
+        .smart-slider-next {
+            right: 0;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .smart-slider-prev:hover,
+        .smart-slider-next:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .disabled-button {
+            opacity: 0.9;
+            pointer-events: none;
+            background-color: grey; /* Adjust to your desired color */
+        }
+
+        .goal-achieved-message {
+            color: red; /* Adjust to your desired color */
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<section class="first-product-section">
+    <div class="container-product-p">
+        <div class="left-div-product-p">
+            <div class="embed-responsive embed-responsive-16by9 video_embed" data-log="true" data-value="video">
+                <img class="img-responsive" src="<?php echo CFS()->get('main_image'); ?>" alt="OFFICEBRICKS 2024 Pitch Video">
+                <div class="video-overlay2" data-videoid="yWuE923zvdg">
+                    <a class="overlay-play-button" href="#"></a>
+                </div>
+                <h1><?php echo CFS()->get('company_name'); ?></h1>
+            </div>
+                
+            <div class="progress-bar-container">
+                <div class="progress-bar-data">
+
+
+
+
+                
+                    
+                    <div><p>FUNDED: <strong><?php echo number_format($total_amount, 2); ?></strong></p></div>
+                    <div><p>GOAL: <strong><?php echo number_format($goal, 2); ?></strong></p></div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: <?php echo $progress_percentage; ?>%;"></div>
+                </div>
+                <br><br>
+                <div class="progress-bar-data">
+                    <div>
+                        <p>RESERVED: <strong><?php echo number_format($sum, 2); ?></strong></p>
+                    </div>
+                </div>
+                <div class="progress-bar-r">
+                    <div class="progress-r" style="width: <?php echo $progress_percentage_reserved; ?>%;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-div-product-p">
+            <div class="investment-info">
+                <h2>Investment Details</h2>
+                <p class="product-parameters-p">Targeted return per year: <strong><?php echo CFS()->get('targeted_return_per_year'); ?></strong></p>
+                <p class="product-parameters-p">Target total return: <strong><?php echo CFS()->get('target_total_return'); ?></strong></p>
+                <p class="product-parameters-p">Targeted time to exit: <strong><?php echo CFS()->get('targeted_time_to_exit'); ?></strong></p>
+                <p class="product-parameters-p">Financing target: <strong><?php echo CFS()->get('financing_target'); ?></strong></p>
+                <p class="product-parameters-p">Minimum investment: <strong><?php echo CFS()->get('minimum_investment'); ?></strong></p>
+                <p class="product-parameters-p">Company valuation: <strong><?php echo CFS()->get('company_valuation'); ?></strong></p>
+                <p class="product-parameters-p">Intermediaries: <strong><?php echo CFS()->get('intermediaries'); ?></strong></p>
+                <p class="product-parameters-p"><?php echo CFS()->get('investors_and_rounds'); ?></p>
+                
+                <div class="col-xs-12 kpi-button-wrapper-unique">
+                    <?php if (is_user_logged_in()) : ?>
+                        <!-- Отображается, если пользователь залогинен -->
+                        <?php if ($goal_achieved || $reserved_exceeded) : ?>
+                            <button type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique disabled-button" disabled>Invest now</button>
+                            <p class="goal-achieved-message">You can't fund this project. The goal has been achieved or reserved amount has exceeded the limit.</p>
+                        <?php else : ?>
+                            <?php echo do_shortcode('[membership level="1,2"]<a href="https://smarttrader.investments/payment-page/" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Invest now</a>[/membership]'); ?>
+                        <?php endif; ?>
+                        <p class="confirm-your-email-address2"><b>Your Investor membership will be activated as soon as you confirm your email address.</b></p>
+                        <script>
+                            function checkButtonStatus() {
+                                const investButton = document.getElementById('mainInvestButtonUnique');
+                                const emailAddressElements = document.querySelectorAll('.confirm-your-email-address2');
+
+                                const isInvestButtonVisible = window.getComputedStyle(investButton).display === 'inline-block';
+
+                                emailAddressElements.forEach(element => {
+                                    if (isInvestButtonVisible) {
+                                        element.style.display = 'none';
+                                    } else {
+                                        element.style.display = 'block';
+                                    }
+                                });
+                            }
+
+                            // Call the function to check the status and update the display property
+                            checkButtonStatus();
+
+                            // Optionally, you can set an interval to check periodically
+                            // setInterval(checkButtonStatus, 1000);
+                        </script>
+                    <?php else : ?>
+                        <!-- Отображается, если пользователь не залогинен -->
+                        <a href="https://smarttrader.investments/membership-checkout" type="button" id="mainInvestButtonUnique" class="btn kpi-invest-button-unique">Register</a>
+                        <div class="register-login-link-unique">
+                            Already registered?&nbsp;&nbsp;&nbsp;<a class="login-link-unique" href="https://smarttrader.investments/login/">Log in</a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="first-product-section">
+    <div class="container-product-tabs">
+        <div class="tabs-container-smart-post">
+            <div class="tab-smart-post active-smart-post" data-tab="overview">OVERVIEW</div>
+            <div class="tab-smart-post" data-tab="videos">VIDEOS</div>
+            <div class="tab-smart-post" data-tab="updates">UPDATES</div>
+        </div>
+        <div class="tab-content-container-smart-post">
+            <div id="overview" class="tab-content-smart-post active-smart-post">
+                <h2>Overview</h2>
+                <!-- Pdf -->
+                <a href="/1717747130_2024.06.03_ScrapBees_Deck_Companisto_IC_ENG.pdf" download class="smart-pdf-button">Download PDF</a>
+                <!-- Slide show -->
+                <div class="smart-slider-container">
+                <div class="smart-slider-slide smart-slider-active">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-0.jpg" alt="Slide 1">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-1.jpg" alt="Slide 2">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-2.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-3.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-4.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-5.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-6.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-7.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-8.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-9.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-10.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-11.jpg" alt="Slide 3">
+        </div>
+        <var><div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-13.jpg" alt="Slide 3">
+        </div></var>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-14.jpg" alt="Slide 3">
+        </div>
+        <div class="smart-slider-slide">
+            <img src="https://www.companisto.com/docs/overview/pitchdeck/362/en/pitch_deck-15.jpg" alt="Slide 3">
+        </div>
+                    <button class="smart-slider-prev">&#10094;</button>
+                    <button class="smart-slider-next">&#10095;</button>
+                </div>
+                <!-- Dynamic text -->
+                <?php echo CFS()->get('investment_opportunities_description'); ?>
+            </div>
+            <div id="videos" class="tab-content-smart-post">
+                <h2>Videos</h2>
+                <p>Content for the Videos section.</p>
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/KQ06gXz1rtk?si=lHoC-55p5u27WZvE&amp;start=157" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+            <div id="updates" class="tab-content-smart-post">
+                <div class="smart-updates-wrapper">
+                    <?php display_category_posts('post-2-updates'); ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="third-product-section">
+    <div class="container-product-comments">
+        <?php echo do_shortcode('[my_unique_custom_comments]'); ?>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let slideIndex = 0;
+    const slides = document.querySelectorAll('.smart-slider-slide');
+    const prev = document.querySelector('.smart-slider-prev');
+    const next = document.querySelector('.smart-slider-next');
+
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.style.display = 'none';
+            slide.classList.remove('smart-slider-active');
+            if (i === index) {
+                slide.style.display = 'block';
+                slide.classList.add('smart-slider-active');
+            }
+        });
+    }
+
+    function showNextSlide() {
+        slideIndex = (slideIndex + 1) % slides.length;
+        showSlide(slideIndex);
+    }
+
+    function showPrevSlide() {
+        slideIndex = (slideIndex - 1 + slides.length) % slides.length;
+        showSlide(slideIndex);
+    }
+
+    prev.addEventListener('click', showPrevSlide);
+    next.addEventListener('click', showNextSlide);
+
+    showSlide(slideIndex);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.tab-smart-post');
+    const contents = document.querySelectorAll('.tab-content-smart-post');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+
+            tabs.forEach(t => t.classList.remove('active-smart-post'));
+            contents.forEach(c => c.classList.remove('active-smart-post'));
+
+            this.classList.add('active-smart-post');
+            document.getElementById(tabId).classList.add('active-smart-post');
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBar = document.querySelector('.progress');
+    const progressBarR = document.querySelector('.progress-r');
+    const goal = <?php echo (float) $goal; ?>;
+    const investment = <?php echo (float) $total_amount; ?>;
+    const reserved = <?php echo (float) $sum; ?>;
+
+    function updateProgress() {
+        const progressPercentage = (investment / goal) * 100;
+        progressBar.style.width = `${Math.min(progressPercentage, 100)}%`;
+    }
+
+    function updateProgressR() {
+        const progressPercentageR = (reserved / goal) * 100;
+        progressBarR.style.width = `${Math.min(progressPercentageR, 100)}%`;
+    }
+
+    // Initial update
+    updateProgress();
+    updateProgressR();
+});
+</script>
+
+</body>
+</html>
+
+<?php get_footer(); ?>
