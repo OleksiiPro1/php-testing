@@ -1,0 +1,135 @@
+<?php
+/*
+Plugin Name: Email Newsletter
+Description: Sends email newsletters to selected users with useful information.
+Version: 1.2
+Author: Oleksii Piltenko
+*/
+
+// Hook into the 'init' action to schedule the email newsletter
+add_action('init', 'en_schedule_email_newsletter');
+
+// Function to schedule the email newsletter if not already scheduled
+function en_schedule_email_newsletter() {
+    if (!wp_next_scheduled('en_send_email_newsletter')) {
+        wp_schedule_event(time(), 'daily', 'en_send_email_newsletter');
+    }
+}
+
+// Hook into the custom 'en_send_email_newsletter' action to actually send the email
+add_action('en_send_email_newsletter', 'en_send_email_newsletter_function');
+
+// Function to send the email newsletter
+function en_send_email_newsletter_function() {
+    // Get the selected users from the settings
+    $selected_users = get_option('en_email_newsletter_users', array());
+
+    // Get the subject and message from the settings
+    $subject = get_option('en_email_newsletter_subject', 'Your Daily Newsletter');
+    $message = get_option('en_email_newsletter_message', 'Here is some useful information for you...');
+
+    // Send the email to each selected user
+    foreach ($selected_users as $user_email) {
+        wp_mail($user_email, $subject, $message);
+    }
+}
+
+// Function to clear the scheduled event upon plugin deactivation
+function en_email_newsletter_deactivation() {
+    wp_clear_scheduled_hook('en_send_email_newsletter');
+}
+register_deactivation_hook(__FILE__, 'en_email_newsletter_deactivation');
+
+// Hook into the admin menu
+add_action('admin_menu', 'en_email_newsletter_admin_menu');
+
+function en_email_newsletter_admin_menu() {
+    add_menu_page(
+        'Email Newsletter Settings',
+        'Newsletter Settings',
+        'manage_options',
+        'en-email-newsletter-settings',
+        'en_email_newsletter_settings_page',
+        'dashicons-email'  // Используем иконку конверта
+    );
+}
+
+// Settings page content
+function en_email_newsletter_settings_page() {
+    // Check if the user is allowed to update options
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    // Handle form submission
+    if (isset($_POST['submit'])) {
+        update_option('en_email_newsletter_subject', sanitize_text_field($_POST['subject']));
+        update_option('en_email_newsletter_message', wp_kses_post($_POST['message']));
+        update_option('en_email_newsletter_users', array_map('sanitize_email', $_POST['users']));
+        en_send_email_newsletter_function();
+        echo '<div class="updated"><p>Emails sent successfully</p></div>';
+    }
+
+    // Get the current settings
+    $subject = get_option('en_email_newsletter_subject', 'Your Daily Newsletter');
+    $message = get_option('en_email_newsletter_message', 'Here is some useful information for you...');
+    $selected_users = get_option('en_email_newsletter_users', array());
+
+    // Fetch all users
+    $users = get_users(array('fields' => array('user_email', 'display_name')));
+
+    ?>
+    <div class="wrap">
+        <h1>Email Newsletter Settings</h1>
+        <form method="post" action="">
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><label for="subject">Email Subject</label></th>
+                    <td><input name="subject" type="text" id="subject" value="<?php echo esc_attr($subject); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="message">Email Message</label></th>
+                    <td>
+                        <?php
+                        wp_editor(
+                            $message,
+                            'message',
+                            array(
+                                'textarea_name' => 'message',
+                                'textarea_rows' => 10,
+                                'media_buttons' => false
+                            )
+                        );
+                        ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="users">Select Users</label></th>
+                    <td>
+                        <button type="button" id="select-all-users" class="button">Select All Users</button>
+                        <br><br>
+                        <?php foreach ($users as $user): ?>
+                            <label>
+                                <input type="checkbox" name="users[]" value="<?php echo esc_attr($user->user_email); ?>" <?php echo in_array($user->user_email, $selected_users) ? 'checked' : ''; ?>>
+                                <?php echo esc_html($user->display_name) . ' (' . esc_html($user->user_email) . ')'; ?>
+                            </label><br>
+                        <?php endforeach; ?>
+                    </td>
+                </tr>
+            </table>
+            <p class="submit">
+                <input type="submit" name="submit" id="submit" class="button button-primary" value="Send">
+            </p>
+        </form>
+    </div>
+    <script type="text/javascript">
+        document.getElementById('select-all-users').addEventListener('click', function() {
+            var checkboxes = document.querySelectorAll('input[name="users[]"]');
+            for (var checkbox of checkboxes) {
+                checkbox.checked = true;
+            }
+        });
+    </script>
+    <?php
+}
+?>
