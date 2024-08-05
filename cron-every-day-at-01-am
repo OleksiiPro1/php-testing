@@ -1,0 +1,14 @@
+nano /var/www/cron-jobs/cleanup.php
+
+<?php
+// Подключите конфигурацию WordPress
+$mysql = mysqli_connect('localhost', 'admin', 'password', 'DB');
+$query = $mysql->query("DELETE FROM all_reservations_table WHERE date_in_7_days =  '". date('Y-m-d')."'");
+
+
+
+
+
+crontab -e
+
+0 1 * * * php /var/www/site.com/cron-jobs/cleanup.php
