@@ -1,0 +1,57 @@
+
+    <div class="calculator-container">
+    <h2>Investment Calculator</h2>
+    <p id="currentDate"></p>
+    <label for="investmentAmount">Enter Investment Amount:</label>
+    <input type="number" id="investmentAmount" placeholder="Enter amount">
+    <label for="investmentYears">Enter Number of Years:</label>
+    <input type="number" id="investmentYears" placeholder="Enter years">
+    <button onclick="calculateReturn()">Calculate Return</button>
+    <p id="result"></p>
+</div>
+
+    <section class="how-it-works-contact">
+        <h2>Need Help?</h2>
+        <p>If you have any questions or need assistance, our support team is here to help. Feel free to reach out to us anytime.</p>
+        <p>Email: <a href="mailto:support@ourcompany.com">support@ourcompany.com</a></p>
+        <p>Phone: <a href="tel:+1234567890">+1 234 567 890</a></p>
+    </section>
+</div>
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        var currentDate = new Date();
+        var options = { year: 'numeric', month: 'long', day: 'numeric' };
+        var currentDateString = currentDate.toLocaleDateString(undefined, options);
+        document.getElementById('currentDate').innerText = "Today's Date: " + currentDateString;
+    });
+
+    function calculateReturn() {
+        var amount = parseFloat(document.getElementById('investmentAmount').value);
+        var years = parseInt(document.getElementById('investmentYears').value);
+        if (isNaN(amount) || amount <= 0 || isNaN(years) || years <= 0) {
+            document.getElementById('result').innerText = "Please enter valid amount and years.";
+            return;
+        }
+
+        var returnAmount = amount;
+        for (var i = 0; i < years; i++) {
+            returnAmount += returnAmount * 1.5;
+        }
+
+        // Calculate the date after the given number of years
+        var currentDate = new Date();
+        var futureDate = new Date();
+        futureDate.setFullYear(currentDate.getFullYear() + years);
+
+        // Format the future date to a readable string
+        var options = { year: 'numeric', month: 'long', day: 'numeric' };
+        var futureDateString = futureDate.toLocaleDateString(undefined, options);
+
+        document.getElementById('result').innerText = 
+            "Total Return after " + years + " years: $" + returnAmount.toFixed(2) + 
+            "\nYou will receive your return by: " + futureDateString;
+    }
+</script>
