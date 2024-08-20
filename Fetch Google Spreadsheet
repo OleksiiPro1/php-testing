@@ -1,0 +1,83 @@
+<?php
+/**
+ * Template Name: Fetch Google Spreadsheet
+ */
+?>
+
+<div>
+    <label for="asset-select">Select Asset:</label>
+    <select id="asset-select">
+        <option value="">--Select an Asset--</option>
+    </select>
+</div>
+<hr>
+<div id="pip-value-display">
+    <p>Pip Value: <span id="pip-value">--</span></p>
+</div>
+<hr>
+
+<div class="calculator-section">
+    
+            
+                <label for="pipValue">Pip/Point Value (USD)</label>
+                <span type="number" id="pip-value-2" placeholder="Enter the pip/point value" step="0.01">--</span>
+            </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sheetUrl = "https://docs.google.com/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx/pub?gid=0&single=true&output=csv";
+
+        fetch(sheetUrl)
+            .then(response => response.text())
+            .then(data => {
+                // Clean the data by trimming and removing any empty lines
+                const rows = data.trim().split("\n").map(row => row.trim()).filter(row => row);
+
+                // Prepare dropdown options and map for pip values
+                const assetSelect = document.getElementById('asset-select');
+                const pipValues = {};
+
+                // Populate dropdown with assets and pip values
+                rows.forEach(row => {
+                    const cells = row.split(",").map(cell => cell.trim());
+                    if (cells.length > 1) {
+                        const asset = cells[1];
+                        const pipValue = cells[2];
+
+                        // Add to dropdown and mapping if it's one of the specific assets
+                        if (["SP500", "DAX", "DJ30", "FTSE100", "JP225", "NAS100", "VIX", "WTI"].includes(asset)) {
+                            assetSelect.innerHTML += `<option value="${asset}">${asset}</option>`;
+                            pipValues[asset] = pipValue;
+                        }
+                    }
+                });
+
+                // Handle change event for the select field
+                assetSelect.addEventListener('change', function() {
+                    const selectedAsset = assetSelect.value;
+                    const pipValueSpan = document.getElementById('pip-value');
+                    if (selectedAsset && pipValues[selectedAsset]) {
+                        pipValueSpan.textContent = pipValues[selectedAsset];
+                    } else {
+                        pipValueSpan.textContent = '--';
+                    }
+
+                    const pipValueSpan2 = document.getElementById('pip-value-2');
+                    if (selectedAsset && pipValues[selectedAsset]) {
+                        pipValueSpan2.textContent = pipValues[selectedAsset];
+                    } else {
+                        pipValueSpan2.textContent = '--';
+                    }
+
+                });
+            })
+            .catch(error => {
+                console.error("Error fetching the data:", error);
+                document.getElementById("pip-value-display").innerHTML = "Error fetching data. Please check the console for details.";
+            });
+    });
+</script>
+
+<?php
+// PHP code is commented out to focus on JavaScript approach
+?>
