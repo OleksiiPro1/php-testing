@@ -1,0 +1,88 @@
+// !!Интеграция данных подписки начало!!
+
+// PHP функция для получения данных через прокси
+function get_paymaya_subscriptions_data() {
+  $response = wp_remote_get('https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxons.json');
+
+  if (is_wp_error($response)) {
+      echo json_encode(['error' => 'Ошибка при получении данных']);
+      wp_die();
+  }
+
+  echo wp_remote_retrieve_body($response);
+  wp_die();
+}
+
+add_action('wp_ajax_get_paymaya_data', 'get_paymaya_subscriptions_data');
+add_action('wp_ajax_nopriv_get_paymaya_data', 'get_paymaya_subscriptions_data');
+
+
+function add_subscription_data_script() {
+  // Получаем email текущего пользователя на сервере и передаем его в JS
+  $current_user_email = wp_get_current_user()->user_email;
+  ?>
+  <script type="text/javascript">
+
+document.addEventListener("DOMContentLoaded", function () {
+    console.log('Fetching data via proxy...');
+
+    var currentUserEmail = '<?php echo esc_js($current_user_email); ?>'; // Email текущего пользователя
+    console.log('Current user email:', currentUserEmail);
+
+    // Запрос на сервер для получения данных через прокси
+    fetch('/wp-admin/admin-ajax.php?action=get_paymaya_data')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Fetched data:', data);
+
+            // Ищем данные пользователя по email
+            var userData = data.find(entry => entry.email.trim() === currentUserEmail.trim());
+
+            if (userData) {
+                console.log('User data found:', userData); // Выводим данные пользователя для отладки
+
+                // Функция для сравнения дат
+                function shouldShowNextPayment(nextPaymentDate) {
+                    var today = new Date(); // Текущая дата
+                    var paymentDate = new Date(nextPaymentDate); // Дата следующего платежа
+                    return paymentDate >= today; // Возвращает true, если дата платежа >= текущей дате
+                }
+
+                // Создаем блок с информацией о подписке
+                var userInfoDiv = document.createElement('div');
+                userInfoDiv.innerHTML = `
+                    <div class="subscription-information-json">
+                    <h2>Subscription Information:</h2>
+                    <br><br>
+                    <p>Amount: ${userData.amount}$</p>                    
+                    <p>Next Payment: ${shouldShowNextPayment(userData.next_payment) ? userData.next_payment : 'N/A'}</p>
+                    <p>Period: ${userData.period}</p>
+                    </div>
+                `;
+                userInfoDiv.style.color = 'blue'; // Добавляем стили для видимости
+
+                // Ищем второй элемент с классом pmpro_card и вставляем данные в начало
+                var pmproCards = document.querySelectorAll('.pmpro_card');
+                if (pmproCards.length > 1) {
+                    pmproCards[1].insertAdjacentElement('afterbegin', userInfoDiv); // Вставляем в начало второго div
+                    console.log('User subscription data added to the second pmpro_card.');
+                } else {
+                    console.log('Second pmpro_card element not found.');
+                }
+            } else {
+                console.log('No user data found for this email:', currentUserEmail);
+            }
+        })
+        .catch(error => console.error('Error fetching data:', error));
+});
+
+
+
+  </script>
+  <?php
+}
+add_action('wp_footer', 'add_subscription_data_script');
+
+
+
+// !!Интеграция данных подписки конец!!
