@@ -1,0 +1,74 @@
+<script>
+jQuery(document).ready(function($) {
+    <?php if (isset($_POST['email']) && !empty($_POST['email'])) { ?>
+    $('#billing_email').val('<?= $_POST['email'] ?>');
+    <?php } ?>
+    <?php if (isset($_POST['first_name']) && !empty($_POST['first_name'])) { ?>
+    $('#billing_first_name').val('<?= $_POST['first_name'] ?>');
+    <?php } ?>
+    <?php if (isset($_POST['last_name']) && !empty($_POST['last_name'])) { ?>
+    $('#billing_last_name').val('<?= $_POST['last_name'] ?>');
+    <?php } ?>
+    <?php if (isset($_POST['country_region']) && !empty($_POST['country_region'])) { ?>
+    $('#billing_country option:contains("<?= $_POST['country_region'] ?>")').prop('selected', true);
+    <?php } ?>
+    <?php if (isset($_POST['phone_number']) && !empty($_POST['phone_number'])) { ?>
+    $('#billing_phone').val('<?= $_POST['phone_number'] ?>');
+    <?php } ?>
+    $('#billing_email_field label').append('<span style="margin-right: 10px; color: #ff0000"></span>');
+    <?php if (!isset($_POST['email']) || empty($_POST['email'])) { ?>
+    var register_button_html = `<p style="text-align: right;"><button class="button wp-element-button" id="quick_register" style="background: #007cba">Register</button></p>`;
+    $('.woocommerce-billing-fields__field-wrapper').after(register_button_html);
+    $(document).on('click','#quick_register', function(e) {
+        e.preventDefault();
+        $.ajax({
+        url: 'https://smarttrader.community/wp-content/plugins/stc-bridge/api.php',
+        method: "post",
+        data: {
+            process: "quick_register",
+            first_name: $('#billing_first_name').val(),
+            last_name: $('#billing_last_name').val(),
+            country_region: $('#billing_country option:selected').text(),
+            phone_number: $('#billing_phone').val(),
+            email: $('#billing_email').val()
+        },
+        cache: false,
+        beforeSend: function () {
+            //$preloader.show();
+        },
+        success: function (response) {
+            if (response.trim().length > 0) {
+                if (response.trim() == 1) {
+                    $('#quick_register').remove();
+                    $('#place_order').addClass('workable');
+                } else {
+                    alert('ERROR: This email already exists or is incorrect.');
+                }
+                //$preloader.hide();
+            }
+        }
+        });
+    });
+    <?php } ?>
+    $(document).on('input change','#billing_email', function() {
+        $.ajax({
+        url: 'https://smarttrader.community/wp-content/plugins/stc-bridge/api.php',
+        method: "post",
+        data: {
+            process: "email_checking",
+            email_to_check: $(this).val()
+        },
+        cache: false,
+        beforeSend: function () {
+            //$preloader.show();
+        },
+        success: function (response) {
+            if (response.trim().length > 0) {
+                $('#billing_email_field label span').html(response.trim());
+                //$preloader.hide();
+            }
+        }
+        });
+    });
+});
+</script>
