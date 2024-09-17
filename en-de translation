@@ -1,0 +1,21 @@
+
+
+ // Получаем текущий URL
+    $current_url = $_SERVER['REQUEST_URI'];
+
+    // Проверяем, есть ли в URL /de (немецкая версия)
+    if (strpos($current_url, '/de') !== false) {
+        // Немецкая версия футера
+        ?>
+
+      // DE content
+
+    <?php
+    } else {
+        // Английская версия футера
+        ?>
+      // EN content
+        <?php
+    }
+        ?>
+      
