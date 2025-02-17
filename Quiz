@@ -1,0 +1,264 @@
+<?php
+/*
+Plugin Name: German Language Quiz
+Description: Плагин для тестирования знаний немецкого языка.
+Version: 1.0
+Author: Oleksii Piltenko
+*/
+
+function german_quiz_shortcode() {
+    ob_start();
+    ?>
+    <style>
+input[type="submit"] {
+    background: #d62222 !important;
+}
+input#next-button {
+    padding: 14px;
+    background: #d62222;
+    cursor: pointer;
+}
+
+div#progress-bar {
+    margin-bottom: 30px;
+}
+
+audio {
+    margin: 10px;
+}
+    </style>
+    <div id="registration-form">
+        <form id="quiz-registration-form" method="post">
+            <label for="name">Имя:</label><br>
+            <input type="text" id="name" name="name" required><br><br>
+
+            <label for="email">Email:</label><br>
+            <input type="email" id="email" name="email" required><br><br>
+
+            <label for="phone">Телефон:</label><br>
+            <input type="text" id="phone" name="phone" required><br><br>
+
+            <input type="submit" name="quiz_start" value="Перейти к тесту">
+        </form>
+    </div>
+
+    <div id="quiz-container" style="display:none;">
+        <form id="quiz-form" method="post">
+            <input type="hidden" name="name" id="quiz-name">
+            <input type="hidden" name="email" id="quiz-email">
+            <input type="hidden" name="phone" id="quiz-phone">
+
+            <div id="progress-bar" style="margin-top: 20px; height: 20px; width: 100%; background: #e0e0e0;">
+                <div id="progress" style="height: 100%; width: 0%; background: green;"></div>
+            </div>
+
+            <div id="question1" class="quiz-question">
+                <p>1. Как переводится слово "Haus"?</p>
+                <input type="radio" name="question1" value="a" required> a) Дом <br>
+                <input type="radio" name="question1" value="b"> b) Книга <br>
+                <input type="radio" name="question1" value="c"> c) Машина <br><br>
+            </div>
+
+            <div id="question2" class="quiz-question" style="display:none;">
+              <p>2. Вставьте правильное слово:</p>
+              <br>
+              <i><p>Juliana kommt aus Paris.</p><p>Das ist die Hauptstadt von Frankreich. In diesem Sommer <span id="fill-blank" style="color: yellow">_____</span> sie einen Sprachkurs in Freiburg.</p><p>Das ist eine Universitätsstadt im Süden von Deutschland.</p></i>
+              <br>
+              <input type="radio" name="question2" value="a" required> a) macht <br>
+              <input type="radio" name="question2" value="b"> b) machen <br>
+              <input type="radio" name="question2" value="c"> c) machten <br><br>
+            </div>
+
+
+            <div id="question3" class="quiz-question" style="display:none;">
+                <p>3. Прослушайте аудио и выберите правильный ответ:</p>
+                <audio controls>
+                    <source src="https://demo.wp.kiev.ua/quiz-q1-a1.mp3" type="audio/mp3">
+                </audio><br>
+                <input type="radio" name="question3" value="a" required> a) Antwort 1 <br>
+                <input type="radio" name="question3" value="b"> b) Antwort 2 <br>
+                <input type="radio" name="question3" value="c"> c) Antwort 3 <br><br>
+            </div>
+
+            <!-- <div id="progress-bar" style="margin-top: 20px; height: 20px; width: 100%; background: #e0e0e0;">
+                <div id="progress" style="height: 100%; width: 0%; background: green;"></div>
+            </div> -->
+
+            <input type="button" id="next-button" value="Следующий вопрос" style="margin-top: 20px;">
+        </form>
+    </div>
+
+    <div id="results" style="display:none;">
+        <h3>Ваш результат: <span id="final-score"></span>/3</h3>
+        <h3>Ваш уровень: <span id="level"></span></h3>
+        <p><a id="training-link" href="#">Получить курс для вашего уровня</a></p>
+    </div>
+
+    <script>
+        document.getElementById('quiz-registration-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var name = document.getElementById('name').value;
+            var email = document.getElementById('email').value;
+            var phone = document.getElementById('phone').value;
+
+            // Сохранить данные в скрытые поля формы
+            document.getElementById('quiz-name').value = name;
+            document.getElementById('quiz-email').value = email;
+            document.getElementById('quiz-phone').value = phone;
+
+            // Показать форму теста
+            document.getElementById('registration-form').style.display = 'none';
+            document.getElementById('quiz-container').style.display = 'block';
+            showNextQuestion();
+        });
+
+        let currentQuestion = 0;
+        let score = 0;
+        const questions = document.querySelectorAll('.quiz-question');
+        const progressBar = document.getElementById('progress');
+        const nextButton = document.getElementById('next-button');
+        const resultsContainer = document.getElementById('results');
+        const finalScore = document.getElementById('final-score');
+        const levelElement = document.getElementById('level');
+        const trainingLink = document.getElementById('training-link');
+
+        function showNextQuestion() {
+            // Скрыть текущий вопрос
+            if (currentQuestion > 0) {
+                questions[currentQuestion - 1].style.display = 'none';
+            }
+
+            // Показать следующий вопрос
+            if (currentQuestion < questions.length) {
+                questions[currentQuestion].style.display = 'block';
+
+                // Обновление полосы прогресса
+                const progress = (currentQuestion / questions.length) * 100;
+                progressBar.style.width = progress + '%';
+            }
+
+            // Если это последний вопрос, отображаем результаты
+            if (currentQuestion === questions.length) {
+                showResults();
+            }
+
+            currentQuestion++;
+        }
+
+        nextButton.addEventListener('click', function(event) {
+            event.preventDefault();
+
+            // Проверка ответов
+            if (document.querySelector('input[name="question' + (currentQuestion) + '"]:checked')) {
+                const answer = document.querySelector('input[name="question' + (currentQuestion) + '"]:checked').value;
+                if ((currentQuestion === 1 && answer === 'a') ||
+                    (currentQuestion === 2 && answer === 'a') ||
+                    (currentQuestion === 3 && answer === 'b')) {
+                    score++;
+                }
+            }
+
+            showNextQuestion();
+        });
+
+        function showResults() {
+            // Скрыть тест
+            document.getElementById('quiz-container').style.display = 'none';
+
+            // Показать результаты
+            const percentage = (score / 3) * 100;
+            let level = '';
+            let link = '';
+
+            if (percentage < 50) {
+                level = 'A1';
+                link = 'https://ifu-institut.at/deutschkurse/deutsch-intensivkurs-a1';
+            } else if (percentage < 70) {
+                level = 'A2';
+                link = 'https://ifu-institut.at/deutschkurse/deutsch-intensivkurs-a2';
+            } else if (percentage < 90) {
+                level = 'B1';
+                link = 'https://ifu-institut.at/deutschkurse/deutsch-intensivkurs-b1';
+            } else {
+                level = 'B2';
+                link = 'https://ifu-institut.at/deutschkurse/deutsch-intensivkurs-b2';
+            }
+
+            finalScore.textContent = score;
+            levelElement.textContent = level;
+            trainingLink.href = link;
+            trainingLink.textContent = 'Получить курс для вашего уровня';
+
+            // Отправка результатов на email
+            sendResultsToEmail(level, score);
+
+            resultsContainer.style.display = 'block';
+        }
+
+        function sendResultsToEmail(level, score) {
+            var name = document.getElementById('quiz-name').value;
+            var email = document.getElementById('quiz-email').value;
+            var phone = document.getElementById('quiz-phone').value;
+
+            var subject = 'Результаты теста по немецкому языку';
+            var message = 'Имя: ' + name + '\n' +
+                          'Email: ' + email + '\n' +
+                          'Телефон: ' + phone + '\n' +
+                          'Результат: ' + score + '/3\n' +
+                          'Уровень: ' + level + '\n' +
+                          'Ссылка на курс: ' + trainingLink.href;
+
+            // Отправка письма через AJAX
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '<?php echo admin_url('admin-ajax.php'); ?>', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    console.log('Результаты успешно отправлены на почту');
+                }
+            };
+            xhr.send('action=send_quiz_results&subject=' + encodeURIComponent(subject) +
+                '&message=' + encodeURIComponent(message));
+        }
+
+        document.querySelectorAll('input[name="question2"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+        const selectedAnswer = document.querySelector('input[name="question2"]:checked').value;
+        const span = document.getElementById('fill-blank');
+
+        // Подставляем правильный ответ в <span> в зависимости от выбора
+        if (selectedAnswer === 'a') {
+            span.textContent = 'macht';
+        } else if (selectedAnswer === 'b') {
+            span.textContent = 'machen';
+        } else if (selectedAnswer === 'c') {
+            span.textContent = 'machten';
+        }
+    });
+});
+
+
+    </script>
+
+    <?php
+    return ob_get_clean();
+}
+
+add_shortcode('german_quiz', 'german_quiz_shortcode');
+
+// Обработка отправки результатов на почту
+function send_quiz_results() {
+    if (isset($_POST['subject']) && isset($_POST['message'])) {
+        $to = 'ukr.top@ukr.net';
+        $subject = sanitize_text_field($_POST['subject']);
+        $message = sanitize_textarea_field($_POST['message']);
+        wp_mail($to, $subject, $message);
+    }
+    wp_die(); // Останавливает выполнение скрипта
+}
+
+add_action('wp_ajax_send_quiz_results', 'send_quiz_results');
+add_action('wp_ajax_nopriv_send_quiz_results', 'send_quiz_results');
+
+?>
